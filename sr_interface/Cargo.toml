@@ -1,0 +1,14 @@
+[package]
+name = "sr_interface"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "sr_interface"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.19.0"
+shallow_red_engine = { git = "https://github.com/15jgme/shallow_red_engine", branch = "main"}
+chess = ">0.0.1"

@@ -79,19 +79,8 @@ class LichessDatasetCSV(LichessDataset):
 
         return (indicies, eval_raw)
     
-## TODO make this a single parent class with the data getter being filled in by the child 
-class LichessDatasetSQL(Dataset):
-    """Lichess eval dataset from SQL."""
-
-    cutoff = 1500 #800 # We dont really care about inaccuracies greater than this
-
-    def _bound(self, val: float, min: float, max: float) -> float:
-        if val < min:
-            return min
-        elif val > max:
-            return max
-        else:
-            return val
+class LichessDatasetSQL(LichessDataset):
+    """SQLITE lichess dataloader"""
 
     def __init__(self, db_file):
         """
@@ -103,11 +92,8 @@ class LichessDatasetSQL(Dataset):
         self.db_con = sqlite3.connect(db_file)
         self.cur = self.db_con.cursor()
         self._len = self.cur.execute("SELECT COUNT(*) FROM games;").fetchone()[0]
-
-    def __len__(self):
-        return self._len
     
-    def __getitem__(self, idx):
+    def _get_encoding_eval(self, idx) -> tuple:
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
@@ -116,14 +102,7 @@ class LichessDatasetSQL(Dataset):
         entry = self.cur.execute('SELECT * FROM games WHERE [index] = ' + str(idx)).fetchone()
 
         indicies = entry[1]
-        evl = self._bound(float(entry[6]), -self.cutoff, self.cutoff)
+        evl = self._bound(float(entry[2]), -self.cutoff, self.cutoff)
 
         indicies = indicies.split(" ") # Split index list by spaces
-        sqp = np.zeros(64*2*6)
-        for index_str in indicies:
-            index = int(index_str)
-            sqp[index] = 1
-    
-        sample = {'sqp': sqp, 'eval': evl}
-
-        return sample
+        return (indicies, evl)

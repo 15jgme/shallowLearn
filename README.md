@@ -23,8 +23,8 @@ export LICHESS_DATA="/home/username/Downloads/lichess_db_standard_rated_2023-08.
 Before running the parsing script you'll need to build shallowred_interface. This provides python access to the evaluation function of the [ShallowRed chess engine](https://github.com/15jgme/shallow_red_engine). I plan to use this at somepoint to learn the difference between the stockfish eval and the traditional node evaluation used by ShallowRed
 ``` bash
 # Make sure you're in the venv
-cd shallowred-interface 
-maturin build # You'll probably need rust and cargo installed
+cd sr_interface 
+maturin dev # You'll probably need rust and cargo installed
 cd ..
 ```
 

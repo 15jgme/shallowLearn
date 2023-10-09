@@ -1,17 +1,18 @@
 import chess.pgn
-import engine_wrapped
+# from shallowred_interface import fen_eval
 import codecs
 from tqdm import tqdm
 import numpy as np
 from typing import List
 from .parse_util import board_to_int
 import os
+import sr_interface
 
 data_file = os.environ['LICHESS_DATA']
 output_file = "games-sf-only.csv"
 
-continue_from_index = 33972 #0
-game_count_limit = 500000
+continue_from_index = 501020 #0
+game_count_limit = 2500000
 
 if continue_from_index is 0:
     # Only overwrite if beginning at zero
@@ -48,7 +49,7 @@ def generate_csv_lines(current_game: chess.pgn.Game) -> (List[str] | None):
 
             fen = board.fen()
             sqp = board_to_int(board)
-            shallowred_w_score = engine_wrapped.fen_eval(fen)
+            shallowred_w_score = sr_interface.fen_eval(fen)
             heur_w_score = cp_w_score - shallowred_w_score
 
             # Should present eval for the current player
