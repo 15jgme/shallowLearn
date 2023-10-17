@@ -11,15 +11,17 @@ from dataset.dataset import LichessDataset, LichessDatasetSQL
 import matplotlib.pyplot as plt
 import matplotlib
 
-# torch.backends.cudnn.benchmark = True
-torch.set_default_dtype(torch.float64)
+
+torch.backends.cudnn.benchmark = True
+# torch.backends.cudnn.enabled = False
+torch.set_default_dtype(torch.float32)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device = torch.device('cpu')
 
 # dataset = LichessDataset('games-sf-only.csv')
 dataset = LichessDatasetSQL('games-sf.db')
 
-batch_size =  64 #6384 #24 #256 #64 #32
+batch_size =  32 #32 #6384 #24 #256 #64 #32
 validation_split = 0.2
 # Creating data indices for training and validation splits:
 dataset_size = len(dataset)
@@ -48,27 +50,23 @@ class NeuralNetwork(nn.Module):
 
         self.layer1 = nn.Linear(64*2*6, 512)
         self.layer2 = nn.Linear(512, 32)
-        self.layer3 = nn.Linear(32, 32)
-        self.layer4 = nn.Linear(32, 1)
-
-        # self.bnorm1 = nn.BatchNorm1d(512, affine=True)
-        # self.bnorm2 = nn.BatchNorm1d(32, affine=True)
-        # self.bnorm3 = nn.BatchNorm1d(32, affine=True)
+        self.layer3 = nn.Linear(32, 24)
+        self.layer4 = nn.Linear(24, 24)
+        self.layer5 = nn.Linear(24, 1)
 
     def forward(self, x):
         x = self.layer1(x)
-        # x = self.bnorm1(x)
-        x =  F.relu6(x) # Clipped relu
-
+        x = F.rrelu(x)
         x = self.layer2(x)
-        # x = self.bnorm2(x)
         x = F.relu6(x)
-
         x = self.layer3(x)
-        # x = self.bnorm3(x)
-        x = F.relu6(x)
-
+        x = F.rrelu(x)
         x = self.layer4(x)
+        x = F.relu6(x)
+        x = self.layer5(x)
+
+        # Perform bounding with sigmoid
+        x = (F.sigmoid(x) - 0.5) * 2 * dataset.cutoff
 
         return x
     
@@ -81,6 +79,7 @@ if is_ipython:
     from IPython import display
 
 def plot_losses(avg_loss_epochs, loss_data):
+    plt.close()
     fig = plt.figure()
     # fig, axis = plt.subplots(2)
     # plt.xlabel('Epoch')
@@ -109,7 +108,7 @@ def train_loop(dataloader, model, loss_fn, optimizer):
 
     for batch, sample in enumerate(dataloader):
         optimizer.zero_grad()
-        x = sample['sqp'].to(device).type(torch.float64) # should be to sparse
+        x = sample['sqp'].to(device).type(torch.float32) # should be to sparse
         y = sample['eval'].to(device)
 
         predic = model(x).squeeze()
@@ -119,7 +118,7 @@ def train_loop(dataloader, model, loss_fn, optimizer):
         optimizer.step()
 
         if batch % 100 == 0:
-            loss, current = loss.item(), (batch + 1) * len(x)
+            loss, current = loss.detach().item(), (batch + 1) * len(x)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
 def test_loop(dataloader, model, loss_fn):
@@ -132,11 +131,11 @@ def test_loop(dataloader, model, loss_fn):
     
     with torch.no_grad():
         for sample in dataloader:
-            x = sample['sqp'].to(device).type(torch.float64) # should be to sparse
+            x = sample['sqp'].to(device).type(torch.float32) # should be to sparse
             y = sample['eval'].to(device)
 
             predic = model(x).squeeze()
-            current_loss = loss_fn(predic, y).item()
+            current_loss = loss_fn(predic, y).detach().item()
             test_loss += current_loss
             epoch_batch_losses = np.append(epoch_batch_losses, current_loss)
 
@@ -162,17 +161,17 @@ except Exception as e:
     print(e)
 
 train_sampler, valid_sampler = generate_sampler(split)
-train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler, num_workers=2, pin_memory=True)
-validation_loader = DataLoader(dataset, batch_size=batch_size, sampler=valid_sampler, num_workers=2, pin_memory=True)
+train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler, num_workers=4, pin_memory=True)
+validation_loader = DataLoader(dataset, batch_size=batch_size, sampler=valid_sampler, num_workers=4, pin_memory=True)
 
-loss_fn = nn.L1Loss()
-# loss_fn = nn.SmoothL1Loss()
+# loss_fn = nn.L1Loss()
+loss_fn = nn.SmoothL1Loss()
 # loss_fn = nn.MSELoss()
 learning_rate = 1e-4
 # optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.01, amsgrad=True)
 # optimizer = torch.optim.SparseAdam(model.parameters(), lr=learning_rate)
-# optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 # scheduler = ReduceLROnPlateau(optimizer, 'min')
 # scheduler = CyclicLR(optimizer, base_lr=learning_rate, max_lr=0.01)
 

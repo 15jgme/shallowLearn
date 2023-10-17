@@ -17,7 +17,7 @@ def _count_generator(reader):
 class LichessDataset(Dataset):
     """Lichess eval dataset."""
 
-    cutoff = 1500 #800 # We dont really care about inaccuracies greater than this
+    cutoff = 800 # We dont really care about inaccuracies greater than this
 
     def _bound(self, val: float, min: float, max: float) -> float:
         if val < min:
@@ -103,6 +103,7 @@ class LichessDatasetSQL(LichessDataset):
 
         indicies = entry[1]
         evl = self._bound(float(entry[2]), -self.cutoff, self.cutoff)
+
 
         indicies = indicies.split(" ") # Split index list by spaces
         return (indicies, evl)

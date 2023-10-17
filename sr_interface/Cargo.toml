@@ -10,5 +10,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.19.0"
-shallow_red_engine = { git = "https://github.com/15jgme/shallow_red_engine", branch = "main"}
+#shallow_red_engine = { git = "https://github.com/15jgme/shallow_red_engine", branch = "main"}
+shallow_red_engine = { path = "../../shallow_red_engine"}
 chess = ">0.0.1"
